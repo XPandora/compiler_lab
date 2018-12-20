@@ -120,7 +120,7 @@ void doStr(FILE *out, Temp_label label, string str)
   // int length = *(int *)str;
   // length = length + 4;
   int length = strlen(str);
-  // fprintf(out, ".int %d\n", length);
+  fprintf(out, ".int %d\n", length);
   //it may contains zeros in the middle of string. To keep this work, we need to print all the charactors instead of using fprintf(str)
   fprintf(out, ".string \"");
   // int i = 0;
