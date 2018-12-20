@@ -391,7 +391,7 @@ struct Live_graph Live_liveness(G_graph flow)
 		nodes = nodes->tail;
 	}
 
-	showInterference(interference_graph, moveList);
+	// showInterference(interference_graph, moveList);
 	lg.graph = interference_graph;
 	lg.moves = moveList;
 	return lg;

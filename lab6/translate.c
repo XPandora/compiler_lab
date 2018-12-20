@@ -12,7 +12,8 @@
 
 //LAB5: you can modify anything you want.
 
-static F_fragList fragList = NULL;
+static F_fragList strfragList = NULL;
+static F_fragList funcfragList = NULL;
 static int F_wordsize = 8;
 /*
 struct Tr_access_
@@ -240,12 +241,16 @@ Tr_accessList Tr_AccessList(Tr_access head, Tr_accessList tail)
 
 Tr_level Tr_outermost(void)
 {
-	// static?
-	Tr_level outermost = checked_malloc(sizeof(*outermost));
+	static Tr_level outermost = NULL;
+	if (outermost == NULL)
+	{
+		outermost = checked_malloc(sizeof(*outermost));
 
-	Temp_label label = Temp_newlabel();
-	outermost->frame = F_newFrame(label, NULL);
-	outermost->parent = NULL;
+		Temp_label label = Temp_namedlabel("tigermain");
+		outermost->frame = F_newFrame(label, NULL);
+		outermost->parent = NULL;
+	}
+
 	return outermost;
 }
 
@@ -276,7 +281,7 @@ Tr_exp Tr_simpleVar(Tr_access access, Tr_level level)
 	T_exp access_fp = T_Temp(F_FP());
 	while (access->level != level)
 	{
-		access_fp = T_Mem(T_Binop(T_plus, access_fp, T_Const(2*F_wordsize)));
+		access_fp = T_Mem(T_Binop(T_plus, access_fp, T_Const(2 * F_wordsize)));
 		level = level->parent;
 	}
 	return Tr_Ex(F_exp(access->access, access_fp));
@@ -306,21 +311,25 @@ Tr_exp Tr_string(string str)
 	Temp_label label = Temp_newlabel();
 	F_frag frag = F_StringFrag(label, str);
 
-	fragList = F_FragList(frag, fragList);
+	strfragList = F_FragList(frag, strfragList);
 	return Tr_Ex(T_Name(label));
 }
 
 Tr_exp Tr_call(Tr_level caller, Temp_label label, Tr_expList params, Tr_level callee)
 {
 	T_exp staticlink = T_Temp(F_FP());
+	T_expList t_params = makeTExpList(params);
 
+	if (callee->parent == NULL)
+	{
+		return Tr_Ex(T_Call(T_Name(label), T_ExpList(staticlink, t_params)));
+	}
 	while (caller != callee->parent)
 	{
-		staticlink = T_Mem(T_Binop(T_plus, staticlink, T_Const(2*F_wordsize)));
+		staticlink = T_Mem(T_Binop(T_plus, staticlink, T_Const(2 * F_wordsize)));
 		caller = caller->parent;
 	}
 
-	T_expList t_params = makeTExpList(params);
 	return Tr_Ex(T_Call(T_Name(label), T_ExpList(staticlink, t_params)));
 }
 
@@ -523,10 +532,21 @@ void Tr_procEntryExit(Tr_level level, Tr_exp body, Tr_accessList formals)
 	T_stm s = T_Move(T_Temp(F_RV()), unEx(body));
 
 	F_frag frag = F_ProcFrag(s, level->frame);
-	fragList = F_FragList(frag, fragList);
+	funcfragList = F_FragList(frag, funcfragList);
 }
 
 F_fragList Tr_getResult(void)
 {
-	return fragList;
+	if (strfragList == NULL)
+	{
+		return funcfragList;
+	}
+
+	F_fragList fl = strfragList;
+	while (fl->tail)
+	{
+		fl = fl->tail;
+	}
+	fl->tail = funcfragList;
+	return strfragList;
 }

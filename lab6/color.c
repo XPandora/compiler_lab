@@ -13,7 +13,9 @@
 #include "color.h"
 #include "table.h"
 
-#define K 14
+#define K 8
+
+int i = 0;
 
 // data structure for nodes
 // every node belongs to only one of them
@@ -45,8 +47,8 @@ static G_table moveList; // record related move information for every node
 static G_table alias;		 // when (u,v) coalesced, v in coalescedNodes, alias(v) = u
 static G_table color;		 // color for every node
 
-static string hard_regs[17] = {"none", "%rax", "%rbx", "%rcx", "%rdx", "%rsi", "%rdi",
-															 "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15"};
+static string hard_regs[17] = {"none", "%rax", "%rbx", "%r12", "%r13", "%r14", "%r15",
+															 "%r10", "%r11", "%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9", "%rbp", "%rsp"};
 
 /*
  * debug helper
@@ -290,6 +292,8 @@ static void Build(G_graph ig, Temp_map precolored_map, Live_moveList moves)
 	simplifyWorklist = NULL;
 	freezeWorklist = NULL;
 	spillWorklist = NULL;
+
+	spilledNodes = NULL;
 	coalescedNodes = NULL;
 	coloredNodes = NULL;
 	selectStack = NULL;
@@ -321,55 +325,55 @@ static void Build(G_graph ig, Temp_map precolored_map, Live_moveList moves)
 			{
 				*color_num = 1;
 			}
+			else if (temp == F_R10())
+			{
+				*color_num = 7;
+			}
+			else if (temp == F_R11())
+			{
+				*color_num = 8;
+			}
 			else if (temp == F_RBX())
 			{
 				*color_num = 2;
 			}
-			else if (temp == F_RCX())
+			else if (temp == F_R12())
 			{
 				*color_num = 3;
 			}
-			else if (temp == F_RDX())
+			else if (temp == F_R13())
 			{
 				*color_num = 4;
 			}
-			else if (temp == F_RSI())
+			else if (temp == F_R14())
 			{
 				*color_num = 5;
 			}
-			else if (temp == F_RDI())
+			else if (temp == F_R15())
 			{
 				*color_num = 6;
 			}
-			else if (temp == F_R8D())
-			{
-				*color_num = 7;
-			}
-			else if (temp == F_R9D())
-			{
-				*color_num = 8;
-			}
-			else if (temp == F_R10())
+			else if (temp == F_RDI())
 			{
 				*color_num = 9;
 			}
-			else if (temp == F_R11())
+			else if (temp == F_RSI())
 			{
 				*color_num = 10;
 			}
-			else if (temp == F_R12())
+			else if (temp == F_RDX())
 			{
 				*color_num = 11;
 			}
-			else if (temp == F_R13())
+			else if (temp == F_RCX())
 			{
 				*color_num = 12;
 			}
-			else if (temp == F_R14())
+			else if (temp == F_R8D())
 			{
 				*color_num = 13;
 			}
-			else if (temp == F_R15())
+			else if (temp == F_R9D())
 			{
 				*color_num = 14;
 			}
@@ -589,13 +593,6 @@ G_node GetAlias(G_node n)
 
 void Combine(G_node u, G_node v)
 {
-	printf("========Combine===========\n");
-	printf("u:");
-	showNodeList(G_NodeList(u, NULL));
-	printf("v:");
-	showNodeList(G_NodeList(v, NULL));
-	printf("0:");
-	showNodeList(freezeWorklist);
 	if (inNodeList(v, freezeWorklist))
 	{
 		freezeWorklist = sub_nodelist(freezeWorklist, G_NodeList(v, NULL));
@@ -604,8 +601,6 @@ void Combine(G_node u, G_node v)
 	{
 		spillWorklist = sub_nodelist(spillWorklist, G_NodeList(v, NULL));
 	}
-	printf("1:");
-	showNodeList(freezeWorklist);
 	coalescedNodes = union_nodelist(coalescedNodes, G_NodeList(v, NULL));
 	G_enter(alias, v, u);
 	Live_moveList u_ml = G_look(moveList, u);
@@ -630,8 +625,6 @@ void Combine(G_node u, G_node v)
 		freezeWorklist = sub_nodelist(freezeWorklist, G_NodeList(u, NULL));
 		spillWorklist = union_nodelist(spillWorklist, G_NodeList(u, NULL));
 	}
-	printf("2:");
-	showNodeList(freezeWorklist);
 }
 
 static void Coalesce()
@@ -705,6 +698,8 @@ void FreezeMoves(G_node u)
 			freezeWorklist = sub_nodelist(freezeWorklist, G_NodeList(v, NULL));
 			simplifyWorklist = union_nodelist(simplifyWorklist, G_NodeList(v, NULL));
 		}
+
+		ml = ml->tail;
 	}
 }
 
@@ -778,10 +773,6 @@ static void AssignColor()
 	{
 		G_node n = nodes->head;
 		int *c = G_look(color, GetAlias(n));
-		printf("n:");
-		showNodeList(G_NodeList(n, NULL));
-		printf("alias:");
-		showNodeList(G_NodeList(GetAlias(n), NULL));
 		assert(c != NULL);
 		G_enter(color, n, c);
 		nodes = nodes->tail;
@@ -794,43 +785,70 @@ struct COL_result COL_color(G_graph ig, Temp_map precolored_map, Temp_tempList r
 		build
 	*/
 	// graph has been given, just initial data structures
-	printf("Build\n");
+	// printf("Build\n");
 	Build(ig, precolored_map, moves);
 
 	/*
 		MakeWorklist
 	*/
-	printf("MakeWorklist\n");
+	// printf("MakeWorklist\n");
 	MakeWorklist();
+	if (i > 1)
+	{
+		//assert(0);
+	}
+	printf("======== before this round of coloring =======\n");
+	printf("simplifyWorklist: ");
+	showNodeList(simplifyWorklist);
+	printf("worklistMoves: ");
+	showMoveList(worklistMoves);
+	printf("freezeWorklist: ");
+	showNodeList(freezeWorklist);
+	printf("spillWorklist: ");
+	showNodeList(spillWorklist);
 
+	printf("coalescedNodes: ");
+	showNodeList(coalescedNodes);
+	printf("selectStack: ");
+	showNodeList(selectStack);
+	printf("coalescedMoves: ");
+	showMoveList(coalescedMoves);
+	printf("constrainedMoves: ");
+	showMoveList(constrainedMoves);
+	printf("frozenMoves: ");
+	showMoveList(frozenMoves);
+	printf("activeMoves: ");
+	showMoveList(activeMoves);
+
+	i++;
 	// begin repeat
 	while (simplifyWorklist != NULL ||
 				 worklistMoves != NULL ||
 				 freezeWorklist != NULL ||
 				 spillWorklist != NULL)
 	{
-		printf("======== before this round of coloring =======\n");
-		printf("simplifyWorklist: ");
-		showNodeList(simplifyWorklist);
-		printf("worklistMoves: ");
-		showMoveList(worklistMoves);
-		printf("freezeWorklist: ");
-		showNodeList(freezeWorklist);
-		printf("spillWorklist: ");
-		showNodeList(spillWorklist);
+		// printf("======== before this round of coloring =======\n");
+		// printf("simplifyWorklist: ");
+		// showNodeList(simplifyWorklist);
+		// printf("worklistMoves: ");
+		// showMoveList(worklistMoves);
+		// printf("freezeWorklist: ");
+		// showNodeList(freezeWorklist);
+		// printf("spillWorklist: ");
+		// showNodeList(spillWorklist);
 
-		printf("coalescedNodes: ");
-		showNodeList(coalescedNodes);
-		printf("selectStack: ");
-		showNodeList(selectStack);
-		printf("coalescedMoves: ");
-		showMoveList(coalescedMoves);
-		printf("constrainedMoves: ");
-		showMoveList(constrainedMoves);
-		printf("frozenMoves: ");
-		showMoveList(frozenMoves);
-		printf("activeMoves: ");
-		showMoveList(activeMoves);
+		// printf("coalescedNodes: ");
+		// showNodeList(coalescedNodes);
+		// printf("selectStack: ");
+		// showNodeList(selectStack);
+		// printf("coalescedMoves: ");
+		// showMoveList(coalescedMoves);
+		// printf("constrainedMoves: ");
+		// showMoveList(constrainedMoves);
+		// printf("frozenMoves: ");
+		// showMoveList(frozenMoves);
+		// printf("activeMoves: ");
+		// showMoveList(activeMoves);
 
 		if (simplifyWorklist != NULL)
 		{
@@ -854,11 +872,11 @@ struct COL_result COL_color(G_graph ig, Temp_map precolored_map, Temp_tempList r
 		}
 	}
 
-	printf("AssignColor\n");
+	// printf("AssignColor\n");
 	AssignColor();
 	struct COL_result ret;
 	// constrcuct coloring
-	printf("Construct coloring\n");
+	// printf("Construct coloring\n");
 	Temp_map coloring = Temp_empty();
 	G_nodeList nodes = union_nodelist(coloredNodes, coalescedNodes);
 	while (nodes)
@@ -873,8 +891,6 @@ struct COL_result COL_color(G_graph ig, Temp_map precolored_map, Temp_tempList r
 		Temp_temp t = Live_gtemp(n);
 
 		Temp_enter(coloring, t, String(hard_regs[*c]));
-		string s = Temp_look(coloring, t);
-		printf("temp:%d, reg:%s\n", t->num, s);
 		nodes = nodes->tail;
 	}
 
@@ -889,7 +905,7 @@ struct COL_result COL_color(G_graph ig, Temp_map precolored_map, Temp_tempList r
 
 		actuallSpills = actuallSpills->tail;
 	}
-	
+
 	ret.coloring = coloring;
 	ret.spills = spills;
 	return ret;

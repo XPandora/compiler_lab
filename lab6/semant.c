@@ -88,6 +88,17 @@ U_boolList makeBoolList(A_fieldList params)
 	return U_BoolList(params->head->escape, makeBoolList(params->tail));
 }
 
+Tr_expList reverseTrExpList(Tr_expList el)
+{
+	Tr_expList new_el = NULL;
+	while (el)
+	{
+		new_el = Tr_ExpList(el->head, new_el);
+		el = el->tail;
+	}
+	return new_el;
+}
+
 struct expty transVar(S_table venv, S_table tenv, A_var v, Tr_level l, Temp_label label)
 {
 	switch (v->kind)
@@ -189,7 +200,6 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level l, Temp_labe
 		Ty_tyList formals = x->u.fun.formals;
 		Ty_ty result = x->u.fun.result;
 		Tr_expList tr_expList = NULL;
-
 
 		while (args && formals)
 		{
@@ -304,7 +314,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level l, Temp_labe
 			EM_error(a->pos, "type num does not match");
 			return expTy(NULL, Ty_Int());
 		}
-
+		tr_expList = reverseTrExpList(tr_expList);
 		return expTy(Tr_record(tr_expList), recordty);
 	}
 	case A_seqExp:
@@ -426,7 +436,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level l, Temp_labe
 		S_beginScope(venv);
 		Tr_access loop_var = Tr_allocLocal(l, a->u.forr.escape);
 		S_enter(venv, a->u.forr.var, E_ROVarEntry(loop_var, Ty_Int()));
-		// need a new label 
+		// need a new label
 		struct expty body_ty = transExp(venv, tenv, body, l, done);
 		S_endScope(venv);
 
@@ -515,7 +525,7 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level l, Temp_label labe
 				dupList = dupList->tail;
 			}
 
-			Temp_label fname = Temp_newlabel();
+			Temp_label fname = f->name;
 			Tr_level nlevel = Tr_newLevel(l, fname, makeBoolList(f->params));
 
 			if (f->result != NULL)
@@ -746,4 +756,3 @@ F_fragList SEM_transProg(A_exp exp)
 	Tr_procEntryExit(main_level, result.exp, NULL);
 	return Tr_getResult();
 }
-

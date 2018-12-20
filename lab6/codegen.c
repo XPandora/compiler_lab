@@ -87,7 +87,7 @@ AS_instr reg_to_reg(Temp_temp src, Temp_temp dst)
 AS_instr str_to_reg(string str, Temp_temp dst)
 {
   char inst[MAXLINE];
-  sprintf(inst, "movq $%s, `d0", str);
+  sprintf(inst, "leaq %s, `d0", str);
   return AS_Oper(String(inst), L(dst, NULL), NULL, NULL);
 }
 
@@ -500,9 +500,12 @@ static Temp_temp munchExp(T_exp e)
       printf("munchExp: T_CALL func kind shoule be T_Name, but get %d", e->u.CALL.fun->kind);
       assert(0);
     }
-
     // caller saved registerss
     // r11 and r12
+    Temp_temp r11_temp = Temp_newtemp();
+    Temp_temp r10_temp = Temp_newtemp();
+    emit(reg_to_reg(F_R11(),r11_temp));
+    emit(reg_to_reg(F_R10(),r10_temp));
 
     // prepare args
     prepare_args = NULL;
@@ -510,10 +513,13 @@ static Temp_temp munchExp(T_exp e)
     Temp_tempList arg_temps = munchArgs(0, e->u.CALL.args);
     push_args(prepare_args);
 
-    AS_instr inst1 = AS_Oper("call `j0", NULL,
+    AS_instr inst1 = AS_Oper("call `j0", L(F_RAX(), L(F_R11(), L(F_R10(), NULL))),
                              arg_temps, AS_Targets(Temp_LabelList(e->u.CALL.fun->u.NAME, NULL)));
     AS_instr inst2 = reg_to_reg(F_RAX(), dst);
+  
     emit(inst1);
+    emit(reg_to_reg(r11_temp,F_R11()));
+    emit(reg_to_reg(r10_temp,F_R10()));
     emit(inst2);
     return dst;
   }
@@ -530,7 +536,6 @@ AS_instrList F_codegen(F_frame f, T_stmList stmList)
   // initial instrList
   iList = NULL;
   last = NULL;
-
   // init params
   // get inreg params
   // mem params should be placed in mem before call
@@ -567,29 +572,31 @@ AS_instrList F_codegen(F_frame f, T_stmList stmList)
       continue;
     }
 
-    if (access->kind != inReg)
-    {
-      printf("F_codegen: access kind should be inReg");
-      assert(0);
-    }
-
     // move param reg to frame use reg
-    emit(reg_to_reg(src_temp, access->u.reg));
+    if (access->kind == inReg)
+    {
+      emit(reg_to_reg(src_temp, access->u.reg));
+    }
+    else
+    {
+      T_stm s = T_Move(T_Mem(T_Binop(T_plus, T_Const(access->u.offset), T_Temp(F_FP()))), T_Temp(src_temp));
+      munchStm(s);
+    }
     index++;
     formals = formals->tail;
   }
 
-  // seven callee saved register in x86-64
-  /*Temp_temp r12_temp = F_R12();
-  Temp_temp r13_temp = F_R13();
-  Temp_temp r14_temp = F_R14();
-  Temp_temp r15_temp = F_R15();
-  Temp_temp rbx_temp = F_RBX();
-  Temp_temp rbp_temp = F_RBP();*/
-
-  // save rbp and change
-  // emit(AS_Oper("pushq `s0", NULL, L(F_RBP(), NULL), NULL));
-  // emit(reg_to_reg(F_RSP(), F_RBP()));
+  // callee saved register in x86-64
+  Temp_temp r12_temp = Temp_newtemp();
+  Temp_temp r13_temp = Temp_newtemp();
+  Temp_temp r14_temp = Temp_newtemp();
+  Temp_temp r15_temp = Temp_newtemp();
+  Temp_temp rbx_temp = Temp_newtemp();
+  emit(reg_to_reg(F_R12(), r12_temp));
+  emit(reg_to_reg(F_R13(), r13_temp));
+  emit(reg_to_reg(F_R14(), r14_temp));
+  emit(reg_to_reg(F_R15(), r15_temp));
+  emit(reg_to_reg(F_RBX(), rbx_temp));
 
   // generate function body
   while (stmList)
@@ -598,13 +605,15 @@ AS_instrList F_codegen(F_frame f, T_stmList stmList)
     stmList = stmList->tail;
   }
 
-  // movq rbp, rsp and popq rbp
-  // emit(reg_to_reg(F_RBP(), F_RSP()));
-  // emit(AS_Oper("popq `d0", L(F_RBP(), NULL), L(F_RSP(), NULL), NULL));
+  // restore callee saved register
+  emit(reg_to_reg(r12_temp, F_R12()));
+  emit(reg_to_reg(r13_temp, F_R13()));
+  emit(reg_to_reg(r14_temp, F_R14()));
+  emit(reg_to_reg(r15_temp, F_R15()));
+  emit(reg_to_reg(rbx_temp, F_RBX()));
 
-  // ret
-  // AS_instr ret_instr = AS_Oper("retq", NULL, NULL, NULL);
-  // emit(ret_instr);
-
+  emit(reg_to_reg(F_RBP(), F_RSP()));
+  emit(AS_Oper("popq %rbp", L(F_RSP(), NULL), L(F_RSP(), L(F_RBP(), NULL)), NULL));
+  emit(AS_Oper("ret", NULL, L(F_SP(), L(F_R12(), L(F_R13(), L(F_R14(), L(F_R15(), L(F_RBX(), NULL)))))), NULL));
   return iList;
 }

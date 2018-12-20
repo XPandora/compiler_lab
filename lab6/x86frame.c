@@ -36,7 +36,7 @@ static F_access InReg(Temp_temp reg)
 	return access;
 }
 
-static F_accessList makeFAccessList(U_boolList formals, int *argSize, int offset)
+static F_accessList makeFAccessList(F_frame f, U_boolList formals, int *argSize, int offset)
 {
 	if (formals == NULL)
 	{
@@ -47,11 +47,15 @@ static F_accessList makeFAccessList(U_boolList formals, int *argSize, int offset
 
 	if (formals->head)
 	{
-		return F_AccessList(InFrame(offset), makeFAccessList(formals->tail, argSize, offset + F_wordsize));
+		if (offset == 2 * F_wordsize)
+		{
+			return F_AccessList(InFrame(offset), makeFAccessList(f, formals->tail, argSize, offset + F_wordsize));
+		}
+		return F_AccessList(F_allocLocal(f, TRUE), makeFAccessList(f, formals->tail, argSize, offset + F_wordsize));
 	}
 	else
 	{
-		return F_AccessList(InReg(Temp_newtemp()), makeFAccessList(formals->tail, argSize, offset));
+		return F_AccessList(InReg(Temp_newtemp()), makeFAccessList(f, formals->tail, argSize, offset));
 	}
 }
 
@@ -68,7 +72,7 @@ F_frame F_newFrame(Temp_label name, U_boolList formals)
 
 	int *argSize = checked_malloc(sizeof(*argSize));
 	*argSize = 0;
-	frame->formals = makeFAccessList(formals, argSize, 2 * F_wordsize);
+	frame->formals = makeFAccessList(frame, formals, argSize, 2 * F_wordsize);
 	frame->argSize = *argSize;
 	/*
 	while (formals)
@@ -383,7 +387,7 @@ AS_proc F_procEntryExit3(F_frame f, AS_instrList body)
 	char inst1[300], inst2[300];
 
 	sprintf(inst1, "pushq %rbp\nmovq %rsp, %rbp\nsubq $%d, %rsp\n", f->length);
-	sprintf(inst2, "movq %rbp, %rsp\npopq %rbp\nretq\n");
+	sprintf(inst2, "");
 
 	p = String(inst1);
 	e = String(inst2);

@@ -12,6 +12,7 @@
 #include "regalloc.h"
 #include "table.h"
 #include "flowgraph.h"
+#include <string.h>
 
 /* 
 	Register Alloc
@@ -60,6 +61,9 @@ static Temp_tempList replaceTempList(Temp_temp old, Temp_temp new, Temp_tempList
 
 static AS_instrList RewriteProgram(F_frame f, AS_instrList il, Temp_tempList spills)
 {
+
+	printf("===========old================\n");
+	AS_printInstrList(stdout, il, Temp_layerMap(F_tempMap, Temp_name()));
 	AS_instrList new_il = il;
 	while (spills)
 	{
@@ -102,7 +106,7 @@ static AS_instrList RewriteProgram(F_frame f, AS_instrList il, Temp_tempList spi
 
 				// new store
 				char inst_c[100];
-				sprintf(inst_c, "movq `s0, %d(%%rbp)", -f->length);
+				sprintf(inst_c, "movq `s0, %d(%rbp)", -f->length);
 				AS_instr store_inst = AS_Oper(String(inst_c), NULL, Temp_TempList(t, NULL), NULL);
 
 				rewrite_il->tail = AS_InstrList(store_inst, rewrite_il->tail);
@@ -123,7 +127,7 @@ static AS_instrList RewriteProgram(F_frame f, AS_instrList il, Temp_tempList spi
 
 				// new fetch
 				char inst_c[100];
-				sprintf(inst_c, "movq  %d(%%rbp), `d0", -f->length);
+				sprintf(inst_c, "movq %d(%rbp), `d0", -f->length);
 				AS_instr fetch_inst = AS_Oper(String(inst_c), Temp_TempList(t, NULL), NULL, NULL);
 
 				rewrite_il->head = fetch_inst;
@@ -133,25 +137,22 @@ static AS_instrList RewriteProgram(F_frame f, AS_instrList il, Temp_tempList spi
 			rewrite_il = rewrite_il->tail;
 		}
 	}
-
+	printf("===========new================\n");
+	AS_printInstrList(stdout, new_il, Temp_layerMap(F_tempMap, Temp_name()));
 	return new_il;
 }
 
 struct RA_result RA_regAlloc(F_frame f, AS_instrList il)
 {
 	// generate flowgraph and live analysis
-	assert(il != NULL);
-	printf("BEGIN FG_AssemFlowGraph\n");
-	G_graph flowgraph = FG_AssemFlowGraph(il, f);
-	printf("END FG_AssemFlowGraph\n");
-	G_nodeList insts = G_nodes(flowgraph);
-	assert(insts != NULL);
 
-	printf("BEGIN Live_liveness\n");
+	G_graph flowgraph = FG_AssemFlowGraph(il, f);
+	G_nodeList insts = G_nodes(flowgraph);
+
 	struct Live_graph live_graph = Live_liveness(flowgraph);
-	printf("END Live_liveness\n");
+
 	G_nodeList nodes = G_nodes(live_graph.graph);
-	assert(nodes != NULL);
+
 	// start main phase
 	struct COL_result col_result = COL_color(live_graph.graph, F_tempMap, NULL, live_graph.moves);
 
@@ -163,6 +164,25 @@ struct RA_result RA_regAlloc(F_frame f, AS_instrList il)
 	}
 	struct RA_result ret;
 
+	Temp_map final_result = Temp_layerMap(F_tempMap, Temp_layerMap(col_result.coloring, Temp_name()));
+	AS_instrList *p = &il;
+	while (*p)
+	{
+		AS_instr instr = (*p)->head;
+		if (instr->kind == I_MOVE)
+		{
+			char *src = Temp_look(final_result, instr->u.MOVE.src->head);
+			char *dst = Temp_look(final_result, instr->u.MOVE.dst->head);
+
+			if (strncmp(src, dst, 4) == 0)
+			{
+				*p = (*p)->tail;
+				continue;
+			}
+		}
+
+		p = &((*p)->tail);
+	}
 
 	ret.coloring = col_result.coloring;
 	ret.il = il;
