@@ -409,6 +409,34 @@ Tr_exp Tr_condition(A_oper oper, Tr_exp left, Tr_exp right)
 	return Tr_Cx(trues, falses, s);
 }
 
+Tr_exp Tr_strcmp(A_oper oper, Tr_exp left, Tr_exp right)
+{
+	T_stm s;
+	T_exp ret = F_externalCall("stringEqual", T_ExpList(unEx(left), T_ExpList(unEx(right), NULL)));
+	switch (oper)
+	{
+	case A_eqOp:
+	{
+		s = T_Cjump(T_eq, ret, T_Const(1), NULL, NULL);
+		break;
+	}
+	case A_neqOp:
+	{
+		s = T_Cjump(T_ne, ret, T_Const(1), NULL, NULL);
+		break;
+	}
+	default:
+	{
+		printf("translate: in strcmp unexpected oper %d", oper);
+		assert(0);
+	}
+	}
+	patchList trues = PatchList(&s->u.CJUMP.true, NULL);
+	patchList falses = PatchList(&s->u.CJUMP.false, NULL);
+
+	return Tr_Cx(trues, falses, s);
+}
+
 Tr_exp Tr_record(Tr_expList fields)
 {
 	int fields_count = 0;

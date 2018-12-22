@@ -89,6 +89,7 @@ Tr_exp Tr_string(string str);
 Tr_exp Tr_call(Tr_level caller, Temp_label label, Tr_expList params, Tr_level callee);
 Tr_exp Tr_arith(A_oper oper, Tr_exp left, Tr_exp right);
 Tr_exp Tr_condition(A_oper oper, Tr_exp left, Tr_exp right);
+Tr_exp Tr_strcmp(A_oper oper, Tr_exp left, Tr_exp right);
 Tr_exp Tr_record(Tr_expList fields);
 Tr_exp Tr_seq(Tr_exp first, Tr_exp second);
 Tr_exp Tr_ifthenelse(Tr_exp test, Tr_exp then, Tr_exp elsee);
@@ -105,4 +106,3 @@ void Tr_procEntryExit(Tr_level level, Tr_exp body, Tr_accessList formals);
 
 F_fragList Tr_getResult(void);
 #endif
-

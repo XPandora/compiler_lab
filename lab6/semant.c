@@ -224,6 +224,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level l, Temp_labe
 
 			EM_error(a->pos, "too few params in function %s", S_name(a->u.call.func));
 		}
+		tr_expList = reverseTrExpList(tr_expList);
 
 		return expTy(Tr_call(l, x->u.fun.label, tr_expList, x->u.fun.level), actual_ty(result));
 	}
@@ -254,6 +255,11 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level l, Temp_labe
 				{
 					EM_error(a->u.op.left->pos, "same type required");
 				}
+			}
+
+			if (actual_ty(left.ty)->kind == Ty_string)
+			{
+				return expTy(Tr_strcmp(oper, left.exp, right.exp), Ty_Int());
 			}
 
 			return expTy(Tr_condition(oper, left.exp, right.exp), Ty_Int());
