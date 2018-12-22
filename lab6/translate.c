@@ -471,7 +471,7 @@ Tr_exp Tr_array(Tr_exp size, Tr_exp init)
 	Temp_temp array_addr = Temp_newtemp();
 
 	T_stm s = T_Move(T_Temp(array_addr), F_externalCall("initArray",
-																											T_ExpList(unEx(size), T_ExpList(unEx(init), NULL))));
+																											T_ExpList(T_Binop(T_mul, unEx(size), T_Const(2)), T_ExpList(unEx(init), NULL))));
 
 	return Tr_Ex(T_Eseq(s, T_Temp(array_addr)));
 }

@@ -504,8 +504,8 @@ static Temp_temp munchExp(T_exp e)
     // r11 and r12
     Temp_temp r11_temp = Temp_newtemp();
     Temp_temp r10_temp = Temp_newtemp();
-    emit(reg_to_reg(F_R11(),r11_temp));
-    emit(reg_to_reg(F_R10(),r10_temp));
+    emit(reg_to_reg(F_R11(), r11_temp));
+    emit(reg_to_reg(F_R10(), r10_temp));
 
     // prepare args
     prepare_args = NULL;
@@ -516,10 +516,10 @@ static Temp_temp munchExp(T_exp e)
     AS_instr inst1 = AS_Oper("call `j0", L(F_RAX(), L(F_R11(), L(F_R10(), NULL))),
                              arg_temps, AS_Targets(Temp_LabelList(e->u.CALL.fun->u.NAME, NULL)));
     AS_instr inst2 = reg_to_reg(F_RAX(), dst);
-  
+
     emit(inst1);
-    emit(reg_to_reg(r11_temp,F_R11()));
-    emit(reg_to_reg(r10_temp,F_R10()));
+    emit(reg_to_reg(r11_temp, F_R11()));
+    emit(reg_to_reg(r10_temp, F_R10()));
     emit(inst2);
     return dst;
   }

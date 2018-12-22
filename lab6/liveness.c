@@ -192,32 +192,32 @@ struct Live_graph Live_liveness(G_graph flow)
 			G_node cur_node = nodes->head;
 
 			// in'[n] <- in[n], out'[n] <- out[n]
-			Temp_tempList old_in_tempList = *(Temp_tempList *)G_look(in_table, cur_node);
+			Temp_tempList old_inTempList = *(Temp_tempList *)G_look(in_table, cur_node);
 			Temp_tempList old_out_tempList = *(Temp_tempList *)G_look(out_table, cur_node);
 
-			Temp_tempList new_in_tempList;
-			Temp_tempList new_out_tempList;
+			Temp_tempList new_inTempList = old_inTempList;
+			Temp_tempList new_out_tempList = old_out_tempList;
 
 			// in[n] <- use[n] ∪ (out[n] - def[n])
-			new_in_tempList = union_tempList(FG_use(cur_node),
-																			 sub_tempList(old_out_tempList, FG_def(cur_node)));
+			new_inTempList = union_tempList(FG_use(cur_node),
+																			 sub_tempList(new_out_tempList, FG_def(cur_node)));
 
 			// out[n] <- union all succ in[s], s is the succ of n
 			G_nodeList succs = G_succ(cur_node);
 			while (succs)
 			{
 				Temp_tempList succ_in_temp = *(Temp_tempList *)G_look(in_table, succs->head);
-				new_out_tempList = union_tempList(old_out_tempList, succ_in_temp);
+				new_out_tempList = union_tempList(new_out_tempList, succ_in_temp);
 				succs = succs->tail;
 			}
 
-			if (!equal_tempList(old_in_tempList, new_in_tempList) ||
+			if (!equal_tempList(old_inTempList, new_inTempList) ||
 					!equal_tempList(old_out_tempList, new_out_tempList))
 			{
 				finish = FALSE;
 			}
 
-			*(Temp_tempList *)G_look(in_table, cur_node) = new_in_tempList;
+			*(Temp_tempList *)G_look(in_table, cur_node) = new_inTempList;
 			*(Temp_tempList *)G_look(out_table, cur_node) = new_out_tempList;
 
 			nodes = nodes->tail;

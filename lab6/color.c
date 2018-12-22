@@ -47,8 +47,8 @@ static G_table moveList; // record related move information for every node
 static G_table alias;		 // when (u,v) coalesced, v in coalescedNodes, alias(v) = u
 static G_table color;		 // color for every node
 
-static string hard_regs[17] = {"none", "%rax", "%rbx", "%r12", "%r13", "%r14", "%r15",
-															 "%r10", "%r11", "%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9", "%rbp", "%rsp"};
+static string hard_regs[17] = {"none", "%rax", "%r10", "%r11", "%rbx", "%r12", "%r13", "%r14", "%r15",
+															 "%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9", "%rbp", "%rsp"};
 
 /*
  * debug helper
@@ -327,31 +327,31 @@ static void Build(G_graph ig, Temp_map precolored_map, Live_moveList moves)
 			}
 			else if (temp == F_R10())
 			{
-				*color_num = 7;
+				*color_num = 2;
 			}
 			else if (temp == F_R11())
 			{
-				*color_num = 8;
+				*color_num = 3;
 			}
 			else if (temp == F_RBX())
 			{
-				*color_num = 2;
+				*color_num = 4;
 			}
 			else if (temp == F_R12())
 			{
-				*color_num = 3;
+				*color_num = 5;
 			}
 			else if (temp == F_R13())
 			{
-				*color_num = 4;
+				*color_num = 6;
 			}
 			else if (temp == F_R14())
 			{
-				*color_num = 5;
+				*color_num = 7;
 			}
 			else if (temp == F_R15())
 			{
-				*color_num = 6;
+				*color_num = 8;
 			}
 			else if (temp == F_RDI())
 			{
