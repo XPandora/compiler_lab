@@ -61,9 +61,6 @@ static Temp_tempList replaceTempList(Temp_temp old, Temp_temp new, Temp_tempList
 
 static AS_instrList RewriteProgram(F_frame f, AS_instrList il, Temp_tempList spills)
 {
-
-	printf("===========old================\n");
-	AS_printInstrList(stdout, il, Temp_layerMap(F_tempMap, Temp_name()));
 	AS_instrList new_il = il;
 	while (spills)
 	{
@@ -137,8 +134,7 @@ static AS_instrList RewriteProgram(F_frame f, AS_instrList il, Temp_tempList spi
 			rewrite_il = rewrite_il->tail;
 		}
 	}
-	printf("===========new================\n");
-	AS_printInstrList(stdout, new_il, Temp_layerMap(F_tempMap, Temp_name()));
+
 	return new_il;
 }
 

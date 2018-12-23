@@ -96,6 +96,7 @@ static void traverseExp(S_table env, int depth, A_exp e)
 		S_beginScope(env);
 
 		S_enter(env, e->u.forr.var, E_EscapeEntry(depth, &(e->u.forr.escape)));
+		e->u.forr.escape = FALSE;
 		traverseExp(env, depth, e->u.forr.body);
 		S_endScope(env);
 

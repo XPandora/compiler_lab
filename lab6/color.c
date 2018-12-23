@@ -13,9 +13,8 @@
 #include "color.h"
 #include "table.h"
 
-#define K 8
+#define K 14
 
-int i = 0;
 
 // data structure for nodes
 // every node belongs to only one of them
@@ -793,34 +792,7 @@ struct COL_result COL_color(G_graph ig, Temp_map precolored_map, Temp_tempList r
 	*/
 	// printf("MakeWorklist\n");
 	MakeWorklist();
-	if (i > 1)
-	{
-		//assert(0);
-	}
-	printf("======== before this round of coloring =======\n");
-	printf("simplifyWorklist: ");
-	showNodeList(simplifyWorklist);
-	printf("worklistMoves: ");
-	showMoveList(worklistMoves);
-	printf("freezeWorklist: ");
-	showNodeList(freezeWorklist);
-	printf("spillWorklist: ");
-	showNodeList(spillWorklist);
 
-	printf("coalescedNodes: ");
-	showNodeList(coalescedNodes);
-	printf("selectStack: ");
-	showNodeList(selectStack);
-	printf("coalescedMoves: ");
-	showMoveList(coalescedMoves);
-	printf("constrainedMoves: ");
-	showMoveList(constrainedMoves);
-	printf("frozenMoves: ");
-	showMoveList(frozenMoves);
-	printf("activeMoves: ");
-	showMoveList(activeMoves);
-
-	i++;
 	// begin repeat
 	while (simplifyWorklist != NULL ||
 				 worklistMoves != NULL ||
