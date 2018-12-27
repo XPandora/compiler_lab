@@ -75,6 +75,14 @@ AS_instr mem_to_reg(Temp_temp r, Temp_temp dst)
   return AS_Oper(String(inst), L(dst, NULL), L(r, NULL), NULL);
 }
 
+// mem(r + i)->reg
+AS_instr mem_imm_to_reg(Temp_temp r, int imm, Temp_temp dst)
+{
+  char inst[MAXLINE];
+  sprintf(inst, "movq %d(`s0), `d0", imm);
+  return AS_Oper(String(inst), L(dst, NULL), L(r, NULL), NULL);
+}
+
 // reg->reg
 AS_instr reg_to_reg(Temp_temp src, Temp_temp dst)
 {
@@ -209,7 +217,8 @@ static Temp_tempList munchArgs(int index, T_expList args)
 
   Temp_temp src_temp = munchExp(args->head);
   inst = reg_to_reg(src_temp, dst_temp);
-  prepare_args = AS_InstrList(inst, prepare_args);
+  // prepare_args = AS_InstrList(inst, prepare_args);
+  emit(inst);
 
   return Temp_TempList(dst_temp, munchArgs(index + 1, args->tail));
 }
@@ -463,10 +472,47 @@ static Temp_temp munchExp(T_exp e)
   case T_MEM:
   {
     Temp_temp dst = Temp_newtemp();
-    Temp_temp r = munchExp(e->u.MEM);
+    Temp_temp r = Temp_newtemp();
+    AS_instr inst;
+    T_exp mem = e->u.MEM;
 
-    AS_instr inst = mem_to_reg(r, dst);
+    if (mem->kind == T_BINOP && mem->u.BINOP.op == T_plus)
+    {
+      T_exp left_exp = mem->u.BINOP.left;
+      T_exp right_exp = mem->u.BINOP.right;
+
+      if (left_exp->kind == T_CONST)
+      {
+        r = munchExp(right_exp);
+        int imm = left_exp->u.CONST;
+        // if (r == F_FP())
+        // {
+        //   r = F_RSP();
+        //   imm = f->length + imm;
+        // }
+        inst = mem_imm_to_reg(r, imm, dst);
+        emit(inst);
+        return dst;
+      }
+
+      if (right_exp->kind == T_CONST)
+      {
+        r = munchExp(left_exp);
+        int imm = right_exp->u.CONST;
+        // if (r == F_FP())
+        // {
+        //   r = F_RSP();
+        //   imm = f->length + imm;
+        // }
+        inst = mem_imm_to_reg(r, imm, dst);
+        emit(inst);
+        return dst;
+      }
+    }
+    r = munchExp(mem);
+    inst = mem_to_reg(r, dst);
     emit(inst);
+
     return dst;
   }
   case T_TEMP:
@@ -508,20 +554,29 @@ static Temp_temp munchExp(T_exp e)
     emit(reg_to_reg(F_R10(), r10_temp));
 
     // prepare args
+    int arg_count = 0;
     prepare_args = NULL;
     Temp_temp dst = Temp_newtemp();
     Temp_tempList arg_temps = munchArgs(0, e->u.CALL.args);
     push_args(prepare_args);
+    while (arg_temps)
+    {
+      arg_count++;
+      arg_temps = arg_temps->tail;
+    }
+    int frame_arg_count = arg_count > 7 ? arg_count - 6 : 1;
 
     AS_instr inst1 = AS_Oper("call `j0", L(F_RAX(), L(F_R11(), L(F_R10(), NULL))),
                              L(F_RDI(), L(F_RSI(), L(F_RDX(), L(F_RCX(), L(F_R8D(), L(F_R9D(), NULL)))))),
                              AS_Targets(Temp_LabelList(e->u.CALL.fun->u.NAME, NULL)));
     AS_instr inst2 = reg_to_reg(F_RAX(), dst);
+    AS_instr inst3 = op_with_imm("addq", F_RSP(), frame_arg_count * 8);
 
     emit(inst1);
     emit(reg_to_reg(r11_temp, F_R11()));
     emit(reg_to_reg(r10_temp, F_R10()));
     emit(inst2);
+    emit(inst3);
     return dst;
   }
   default:
@@ -614,7 +669,7 @@ AS_instrList F_codegen(F_frame f, T_stmList stmList)
   emit(reg_to_reg(rbx_temp, F_RBX()));
 
   emit(reg_to_reg(F_RBP(), F_RSP()));
-  emit(AS_Oper("popq %rbp", L(F_RSP(), NULL), L(F_RSP(), L(F_RBP(), NULL)), NULL));
+  // emit(AS_Oper("popq %rbp", L(F_RSP(), NULL), L(F_RSP(), L(F_RBP(), NULL)), NULL));
   emit(AS_Oper("ret", NULL, L(F_SP(), L(F_R12(), L(F_R13(), L(F_R14(), L(F_R15(), L(F_RBX(), NULL)))))), NULL));
   return iList;
 }

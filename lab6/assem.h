@@ -39,6 +39,7 @@ struct AS_proc_ {
 };
 
 AS_proc AS_Proc(string p, AS_instrList b, string e);
+AS_instrList AS_rewrite(AS_instrList il, int framesize);
 
 
 //TA's implementation. Just for reference.

@@ -47,11 +47,12 @@ static F_accessList makeFAccessList(F_frame f, U_boolList formals, int *argSize,
 
 	if (formals->head)
 	{
-		if (offset == 2 * F_wordsize)
+		if (offset == F_wordsize || (*argSize) > 7)
 		{
 			return F_AccessList(InFrame(offset), makeFAccessList(f, formals->tail, argSize, offset + F_wordsize));
 		}
-		return F_AccessList(F_allocLocal(f, TRUE), makeFAccessList(f, formals->tail, argSize, offset + F_wordsize));
+		// means arg that passed by param reg is escaped, need to places in frame by callee
+		return F_AccessList(F_allocLocal(f, TRUE), makeFAccessList(f, formals->tail, argSize, offset));
 	}
 	else
 	{
@@ -72,7 +73,7 @@ F_frame F_newFrame(Temp_label name, U_boolList formals)
 
 	int *argSize = checked_malloc(sizeof(*argSize));
 	*argSize = 0;
-	frame->formals = makeFAccessList(frame, formals, argSize, 2 * F_wordsize);
+	frame->formals = makeFAccessList(frame, formals, argSize, F_wordsize);
 	frame->argSize = *argSize;
 	/*
 	while (formals)
@@ -386,7 +387,7 @@ AS_proc F_procEntryExit3(F_frame f, AS_instrList body)
 	string p, e;
 	char inst1[300], inst2[300];
 
-	sprintf(inst1, "pushq %rbp\nmovq %rsp, %rbp\nsubq $%d, %rsp\n", f->length);
+	sprintf(inst1, "subq $%d, %rsp\n", f->length);
 	sprintf(inst2, "");
 
 	p = String(inst1);

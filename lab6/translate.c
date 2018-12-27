@@ -278,10 +278,10 @@ Tr_access Tr_allocLocal(Tr_level level, bool escape)
 
 Tr_exp Tr_simpleVar(Tr_access access, Tr_level level)
 {
-	T_exp access_fp = T_Temp(F_FP());
+	T_exp access_fp = T_Binop(T_plus, T_Temp(F_FP()), T_Const(0));
 	while (access->level != level)
 	{
-		access_fp = T_Mem(T_Binop(T_plus, access_fp, T_Const(2 * F_wordsize)));
+		access_fp = T_Mem(T_Binop(T_plus, access_fp, T_Const(F_wordsize)));
 		level = level->parent;
 	}
 	return Tr_Ex(F_exp(access->access, access_fp));
@@ -317,7 +317,7 @@ Tr_exp Tr_string(string str)
 
 Tr_exp Tr_call(Tr_level caller, Temp_label label, Tr_expList params, Tr_level callee)
 {
-	T_exp staticlink = T_Temp(F_FP());
+	T_exp staticlink = T_Binop(T_plus, T_Temp(F_FP()), T_Const(0));
 	T_expList t_params = makeTExpList(params);
 
 	if (callee->parent == NULL)
@@ -326,7 +326,7 @@ Tr_exp Tr_call(Tr_level caller, Temp_label label, Tr_expList params, Tr_level ca
 	}
 	while (caller != callee->parent)
 	{
-		staticlink = T_Mem(T_Binop(T_plus, staticlink, T_Const(2 * F_wordsize)));
+		staticlink = T_Mem(T_Binop(T_plus, staticlink, T_Const(F_wordsize)));
 		caller = caller->parent;
 	}
 

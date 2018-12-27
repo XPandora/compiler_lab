@@ -103,8 +103,8 @@ static AS_instrList RewriteProgram(F_frame f, AS_instrList il, Temp_tempList spi
 
 				// new store
 				char inst_c[100];
-				sprintf(inst_c, "movq `s0, %d(%rbp)", -f->length);
-				AS_instr store_inst = AS_Oper(String(inst_c), NULL, Temp_TempList(t, NULL), NULL);
+				sprintf(inst_c, "movq `s0, %d(`s1)", -f->length);
+				AS_instr store_inst = AS_Oper(String(inst_c), NULL, Temp_TempList(t, Temp_TempList(F_RBP(), NULL)), NULL);
 
 				rewrite_il->tail = AS_InstrList(store_inst, rewrite_il->tail);
 			}
@@ -124,8 +124,8 @@ static AS_instrList RewriteProgram(F_frame f, AS_instrList il, Temp_tempList spi
 
 				// new fetch
 				char inst_c[100];
-				sprintf(inst_c, "movq %d(%rbp), `d0", -f->length);
-				AS_instr fetch_inst = AS_Oper(String(inst_c), Temp_TempList(t, NULL), NULL, NULL);
+				sprintf(inst_c, "movq %d(`s0), `d0", -f->length);
+				AS_instr fetch_inst = AS_Oper(String(inst_c), Temp_TempList(t, NULL), Temp_TempList(F_RBP(), NULL), NULL);
 
 				rewrite_il->head = fetch_inst;
 				rewrite_il->tail = AS_InstrList(inst, rewrite_il->tail);
@@ -181,6 +181,6 @@ struct RA_result RA_regAlloc(F_frame f, AS_instrList il)
 	}
 
 	ret.coloring = col_result.coloring;
-	ret.il = il;
+	ret.il = AS_rewrite(il, f->length);
 	return ret;
 }
