@@ -160,41 +160,41 @@ struct RA_result RA_regAlloc(F_frame f, AS_instrList il)
 	}
 	struct RA_result ret;
 
-	Temp_map final_result = Temp_layerMap(F_tempMap, Temp_layerMap(col_result.coloring, Temp_name()));
-	AS_instrList *p = &il;
-	while (*p)
+	Temp_map color_map = Temp_layerMap(F_tempMap, Temp_layerMap(col_result.coloring, Temp_name()));
+	AS_instrList *il_ptr = &il;
+	while (*il_ptr)
 	{
-		AS_instr instr = (*p)->head;
+		AS_instr instr = (*il_ptr)->head;
 		if (instr->kind == I_MOVE)
 		{
-			char *src = Temp_look(final_result, instr->u.MOVE.src->head);
-			char *dst = Temp_look(final_result, instr->u.MOVE.dst->head);
+			char *src = Temp_look(color_map, instr->u.MOVE.src->head);
+			char *dst = Temp_look(color_map, instr->u.MOVE.dst->head);
 
 			if (strncmp(src, dst, 4) == 0)
 			{
-				*p = (*p)->tail;
+				*il_ptr = (*il_ptr)->tail;
 				continue;
 			}
 		}
 
-		p = &((*p)->tail);
+		il_ptr = &((*il_ptr)->tail);
 	}
 
-	p = &il;
-	while (*p)
+	il_ptr = &il;
+	while (*il_ptr)
 	{
-		AS_instr instr = (*p)->head;
+		AS_instr instr = (*il_ptr)->head;
 		if (instr->kind == I_OPER && strncmp(instr->u.OPER.assem, "jmp", 3) == 0)
 		{
-			AS_instr next = (*p)->tail->head;
+			AS_instr next = (*il_ptr)->tail->head;
 			if (next->kind == I_LABEL && next->u.LABEL.label == instr->u.OPER.jumps->labels->head)
 			{
-				*p = (*p)->tail;
+				*il_ptr = (*il_ptr)->tail;
 				continue;
 			}
 		}
 
-		p = &((*p)->tail);
+		il_ptr = &((*il_ptr)->tail);
 	}
 
 	ret.coloring = col_result.coloring;

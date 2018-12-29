@@ -662,6 +662,7 @@ AS_instrList F_codegen(F_frame f, T_stmList stmList)
   emit(reg_to_reg(r15_temp, F_R15()));
   emit(reg_to_reg(rbx_temp, F_RBX()));
 
+  // this instruction will finally be rewritten as leaq %d(%rsp), %rsp, detail in AS_rewrite function
   emit(reg_to_reg(F_RBP(), F_RSP()));
   // emit(AS_Oper("popq %rbp", L(F_RSP(), NULL), L(F_RSP(), L(F_RBP(), NULL)), NULL));
   emit(AS_Oper("ret", NULL, L(F_SP(), L(F_R12(), L(F_R13(), L(F_R14(), L(F_R15(), L(F_RBX(), NULL)))))), NULL));
