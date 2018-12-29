@@ -315,11 +315,11 @@ static void munchStm(T_stm s)
     }
 
     // conditional false
-    AS_instr inst3 = AS_Oper(String("jmp `j0"),
-                             NULL, NULL, AS_Targets(Temp_LabelList(s->u.CJUMP.false, NULL)));
+    // AS_instr inst3 = AS_Oper(String("jmp `j0"),
+    //                          NULL, NULL, AS_Targets(Temp_LabelList(s->u.CJUMP.false, NULL)));
     emit(inst1);
     emit(inst2);
-    emit(inst3);
+    //emit(inst3);
     return;
   }
   /*
@@ -546,12 +546,6 @@ static Temp_temp munchExp(T_exp e)
       printf("munchExp: T_CALL func kind shoule be T_Name, but get %d", e->u.CALL.fun->kind);
       assert(0);
     }
-    // caller saved registerss
-    // r11 and r12
-    Temp_temp r11_temp = Temp_newtemp();
-    Temp_temp r10_temp = Temp_newtemp();
-    emit(reg_to_reg(F_R11(), r11_temp));
-    emit(reg_to_reg(F_R10(), r10_temp));
 
     // prepare args
     int arg_count = 0;
@@ -566,15 +560,15 @@ static Temp_temp munchExp(T_exp e)
     }
     int frame_arg_count = arg_count > 7 ? arg_count - 6 : 1;
 
-    AS_instr inst1 = AS_Oper("call `j0", L(F_RAX(), L(F_R11(), L(F_R10(), NULL))),
-                             L(F_RDI(), L(F_RSI(), L(F_RDX(), L(F_RCX(), L(F_R8D(), L(F_R9D(), NULL)))))),
+
+    // caller saved registerss should be placed in call dst
+    AS_instr inst1 = AS_Oper("call `j0", L(F_RAX(), L(F_R11(), L(F_R10(), L(F_RDI(), L(F_RSI(), L(F_RDX(), L(F_RCX(), L(F_R8D(), L(F_R9D(), NULL))))))))),
+                             NULL,
                              AS_Targets(Temp_LabelList(e->u.CALL.fun->u.NAME, NULL)));
     AS_instr inst2 = reg_to_reg(F_RAX(), dst);
     AS_instr inst3 = op_with_imm("addq", F_RSP(), frame_arg_count * 8);
 
     emit(inst1);
-    emit(reg_to_reg(r11_temp, F_R11()));
-    emit(reg_to_reg(r10_temp, F_R10()));
     emit(inst2);
     emit(inst3);
     return dst;

@@ -180,6 +180,23 @@ struct RA_result RA_regAlloc(F_frame f, AS_instrList il)
 		p = &((*p)->tail);
 	}
 
+	p = &il;
+	while (*p)
+	{
+		AS_instr instr = (*p)->head;
+		if (instr->kind == I_OPER && strncmp(instr->u.OPER.assem, "jmp", 3) == 0)
+		{
+			AS_instr next = (*p)->tail->head;
+			if (next->kind == I_LABEL && next->u.LABEL.label == instr->u.OPER.jumps->labels->head)
+			{
+				*p = (*p)->tail;
+				continue;
+			}
+		}
+
+		p = &((*p)->tail);
+	}
+
 	ret.coloring = col_result.coloring;
 	ret.il = AS_rewrite(il, f->length);
 	return ret;

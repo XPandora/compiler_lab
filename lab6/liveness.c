@@ -11,6 +11,16 @@
 #include "liveness.h"
 #include "table.h"
 
+void showTempList(Temp_tempList list)
+{
+	Temp_map some_map = Temp_layerMap(F_tempMap, Temp_name());
+	for (; list; list = list->tail)
+	{
+		printf("%s, ", Temp_look(some_map, list->head));
+	}
+	printf("\n");
+}
+
 Live_moveList Live_MoveList(G_node src, G_node dst, Live_moveList tail)
 {
 	Live_moveList lm = (Live_moveList)checked_malloc(sizeof(*lm));
@@ -128,7 +138,7 @@ void showInterference(G_graph interference, Live_moveList moves)
 		// }
 
 		int count = 0;
-		printf("%s:\n", Temp_look(Temp_name(), temp));
+		printf("%s:\n", Temp_look(Temp_layerMap(F_tempMap, Temp_name()), temp));
 		printf(" conf: ");
 		G_nodeList node_list;
 		for (node_list = G_adj(node); node_list; node_list = node_list->tail)
@@ -200,7 +210,7 @@ struct Live_graph Live_liveness(G_graph flow)
 
 			// in[n] <- use[n] ∪ (out[n] - def[n])
 			new_inTempList = union_tempList(FG_use(cur_node),
-																			 sub_tempList(new_out_tempList, FG_def(cur_node)));
+																			sub_tempList(new_out_tempList, FG_def(cur_node)));
 
 			// out[n] <- union all succ in[s], s is the succ of n
 			G_nodeList succs = G_succ(cur_node);
@@ -232,6 +242,39 @@ struct Live_graph Live_liveness(G_graph flow)
 	printf("BEGIN constrcut graph\n");
 	G_graph interference_graph = G_Graph();
 	TAB_table temp_to_node = TAB_empty();
+
+	// precolored registers
+	Temp_tempList hardRegs =
+			Temp_TempList(F_RAX(),
+										Temp_TempList(F_RBX(),
+																	Temp_TempList(F_RCX(),
+																								Temp_TempList(F_RDX(),
+																															Temp_TempList(F_RSI(),
+																																						Temp_TempList(F_RDI(),
+																																													Temp_TempList(F_R8D(),
+																																																				Temp_TempList(F_R9D(),
+																																																											Temp_TempList(F_R10(),
+																																																																		Temp_TempList(F_R11(),
+																																																																									Temp_TempList(F_R12(),
+																																																																																Temp_TempList(F_R13(),
+																																																																																							Temp_TempList(F_R14(),
+																																																																																														Temp_TempList(F_R15(), NULL))))))))))))));
+
+	for (Temp_tempList temps = hardRegs; temps; temps = temps->tail)
+	{
+		G_node tempNode = G_Node(interference_graph, temps->head);
+		TAB_enter(temp_to_node, temps->head, tempNode);
+	}
+
+	for (Temp_tempList temps = hardRegs; temps; temps = temps->tail)
+	{
+		for (Temp_tempList next = temps->tail; next; next = next->tail)
+		{
+			G_node a = TAB_look(temp_to_node, temps->head);
+			G_node b = TAB_look(temp_to_node, next->head);
+			G_addEdge(a, b);
+		}
+	}
 
 	// enter nodes
 	// attetion RSP and RBP should not enter in order to avoid coalese
@@ -292,11 +335,11 @@ struct Live_graph Live_liveness(G_graph flow)
 	{
 		Temp_tempList def_tempList = FG_def(nodes->head);
 		Temp_tempList use_tempList = FG_def(nodes->head);
-		Temp_tempList out_tempList = *(Temp_tempList *)G_look(out_table, nodes->head);
 
 		while (def_tempList)
 		{
 			Temp_temp def_temp = def_tempList->head;
+			Temp_tempList out_tempList = *(Temp_tempList *)G_look(out_table, nodes->head);
 			G_node def_node = TAB_look(temp_to_node, def_temp);
 
 			if (isSpecialTemp(def_temp))
