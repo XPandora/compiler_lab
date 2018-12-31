@@ -15,7 +15,6 @@
 
 #define K 14
 
-
 // data structure for nodes
 // every node belongs to only one of them
 static G_nodeList precolored; // machine register set
@@ -39,7 +38,7 @@ static Live_moveList worklistMoves;		 // move insts that can be coalessced(possi
 static Live_moveList activeMoves;			 // move insts unready for coalescing
 
 // other structure
-static G_table adjSet;	 // interference edges set, maybe unnessesary
+static G_table adjSet;	 // interference edges set, maybe unnecesary
 static G_table adjList;	// interference nodes set
 static G_table degree;	 // record degree information for every node
 static G_table moveList; // record related move information for every node
@@ -606,6 +605,7 @@ void Combine(G_node u, G_node v)
 	Live_moveList v_ml = G_look(moveList, v);
 
 	G_enter(moveList, u, union_movelist(u_ml, v_ml));
+	EnableMoves(G_NodeList(v, NULL));
 
 	G_nodeList v_adjacents = Adjacent(v);
 	while (v_adjacents)

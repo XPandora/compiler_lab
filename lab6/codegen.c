@@ -553,6 +553,12 @@ static Temp_temp munchExp(T_exp e)
     Temp_temp dst = Temp_newtemp();
     Temp_tempList arg_temps = munchArgs(0, e->u.CALL.args);
     push_args(prepare_args);
+
+    // caller saved registerss should be placed in call dst
+    AS_instr inst1 = AS_Oper("call `j0", L(F_RAX(), L(F_R11(), L(F_R10(), L(F_RDI(), L(F_RSI(), L(F_RDX(), L(F_RCX(), L(F_R8D(), L(F_R9D(), NULL))))))))),
+                             arg_temps,
+                             AS_Targets(Temp_LabelList(e->u.CALL.fun->u.NAME, NULL)));
+
     while (arg_temps)
     {
       arg_count++;
@@ -560,11 +566,6 @@ static Temp_temp munchExp(T_exp e)
     }
     int frame_arg_count = arg_count > 7 ? arg_count - 6 : 1;
 
-
-    // caller saved registerss should be placed in call dst
-    AS_instr inst1 = AS_Oper("call `j0", L(F_RAX(), L(F_R11(), L(F_R10(), L(F_RDI(), L(F_RSI(), L(F_RDX(), L(F_RCX(), L(F_R8D(), L(F_R9D(), NULL))))))))),
-                             NULL,
-                             AS_Targets(Temp_LabelList(e->u.CALL.fun->u.NAME, NULL)));
     AS_instr inst2 = reg_to_reg(F_RAX(), dst);
     AS_instr inst3 = op_with_imm("addq", F_RSP(), frame_arg_count * 8);
 
